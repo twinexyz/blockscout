@@ -14,6 +14,9 @@ services:
       service: backend
     environment:
         ETHEREUM_JSONRPC_VARIANT: 'erigon'
+        INDEXER_DISABLE_INTERNAL_TRANSACTIONS_FETCHER: 'true'
+        INDEXER_DISABLE_PENDING_TRANSACTIONS_FETCHER: 'true'
+        CHAIN_ID: '1337'
 
   visualizer:
     extends:
@@ -25,13 +28,6 @@ services:
       file: ./services/sig-provider.yml
       service: sig-provider
 
-  frontend:
-    depends_on:
-      - backend
-    extends:
-      file: ./services/frontend.yml
-      service: frontend
-  
   stats:
     depends_on:
       - backend
@@ -49,7 +45,6 @@ services:
   proxy:
     depends_on:
       - backend
-      - frontend
       - stats
     extends:
       file: ./services/nginx.yml
