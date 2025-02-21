@@ -33,7 +33,9 @@ for repo <- [
       Explorer.Repo.Suave,
       Explorer.Repo.Zilliqa,
       Explorer.Repo.ZkSync,
-      Explorer.Repo.Neon
+      Explorer.Repo.Neon,
+      Explorer.Repo.Twine
+
     ] do
   config :explorer, repo,
     prepare: :unnamed,

@@ -152,13 +152,15 @@ defmodule Explorer.Repo do
         Explorer.Repo.Suave,
         Explorer.Repo.Zilliqa,
         Explorer.Repo.ZkSync,
-        Explorer.Repo.Neon
-      ] do
+        Explorer.Repo.Neon,
+        Explorer.Repo.Twine
+    ] do
     defmodule repo do
       use Ecto.Repo,
         otp_app: :explorer,
         adapter: Ecto.Adapters.Postgres
 
+      @spec init(any(), keyword()) :: {:ok, [{any(), any()}]}
       def init(_, opts) do
         ConfigHelper.init_repo_module(__MODULE__, opts)
       end
