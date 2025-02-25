@@ -128,11 +128,11 @@ for repo <- [
       Explorer.Repo.Stability,
       Explorer.Repo.Zilliqa,
       Explorer.Repo.ZkSync,
+      Explorer.Repo.Twine,
       # Feature dependent repos
       Explorer.Repo.BridgedTokens,
       Explorer.Repo.ShrunkInternalTransactions,
       Explorer.Repo.Neon,
-      Explorer.Repo.Twine
     ] do
   config :explorer, repo,
     database: database,
