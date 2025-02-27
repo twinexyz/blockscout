@@ -425,6 +425,15 @@ defmodule BlockScoutWeb.Routers.ApiRouter do
       end
     end
 
+
+    scope "/twine" do
+      if @chain_type == :twine do
+        get("/batches", V2.TwineController, :batches)
+        get("/batches/count", V2.TwineController, :batches_count)
+        get("/batches/:batch_number", V2.TwineController, :batch)
+      end
+    end
+
     scope "/mud" do
       if @mud_enabled do
         get("/worlds", V2.MudController, :worlds)
