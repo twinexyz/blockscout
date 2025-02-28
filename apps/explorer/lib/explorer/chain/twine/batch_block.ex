@@ -11,7 +11,7 @@ defmodule Explorer.Chain.Twine.BatchBlock do
   @type t :: %__MODULE__{
           batch_number: non_neg_integer(),
           batch: %Ecto.Association.NotLoaded{} | TransactionBatch.t() | nil,
-          # hash: Hash.t(),
+          hash: Hash.t(),
           block: %Ecto.Association.NotLoaded{} | Block.t() | nil
         }
 

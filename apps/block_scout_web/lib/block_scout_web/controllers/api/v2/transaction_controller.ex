@@ -147,6 +147,15 @@ defmodule BlockScoutWeb.API.V2.TransactionController do
           |> Map.put(:zksync_prove_transaction, :optional)
           |> Map.put(:zksync_execute_transaction, :optional)
 
+
+        :twine ->
+          necessity_by_association_with_actions
+          |> Map.put(:twine_batch, :optional)
+          |> Map.put(:twine_commit_transaction, :optional)
+          |> Map.put(:twine_batch_details => :optional),
+          # |> Map.put(:twine_prove_transaction, :optional)
+          |> Map.put(:twine_execute_transaction, :optional)
+
         :arbitrum ->
           necessity_by_association_with_actions
           |> Map.put(:arbitrum_batch, :optional)

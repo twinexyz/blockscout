@@ -813,6 +813,20 @@ defmodule BlockScoutWeb.API.V2.TransactionView do
         end
       end
 
+    :twine ->
+      defp chain_type_transformations(transactions) do
+        transactions
+      end
+
+      defp chain_type_fields(result, transaction, single_transaction?, _conn, _watchlist_names) do
+        if single_transaction? do
+          # credo:disable-for-next-line Credo.Check.Design.AliasUsage
+          BlockScoutWeb.API.V2.TwineView.extend_transaction_json_response(result, transaction)
+        else
+          result
+        end
+      end
+
     :arbitrum ->
       defp chain_type_transformations(transactions) do
         transactions

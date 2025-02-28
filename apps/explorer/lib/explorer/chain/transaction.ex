@@ -29,6 +29,7 @@ defmodule Explorer.Chain.Transaction.Schema do
   alias Explorer.Chain.PolygonZkevm.BatchTransaction, as: ZkevmBatchTransaction
   alias Explorer.Chain.Transaction.{Fork, Status}
   alias Explorer.Chain.ZkSync.BatchTransaction, as: ZkSyncBatchTransaction
+  alias Explorer.Chain.Twine.BatchTransaction, as: TwineBatchTransaction
 
   @chain_type_fields (case @chain_type do
                         :ethereum ->
@@ -133,6 +134,21 @@ defmodule Explorer.Chain.Transaction.Schema do
                               has_one(:zksync_execute_transaction, through: [:zksync_batch, :execute_transaction])
                             end,
                             2
+                          )
+
+                        :twine ->
+                          elem(
+                            quote do
+                              has_one(:twine_batch_transaction, TwineBatchTransaction,
+                                foreign_key: :transaction_hash,
+                                references: :hash
+                              )
+                              has_one(:twine_batch, through: [:twine_batch_transaction, :batch])
+                              has_many(:twine_batch_details, through: [:twine_batch, :batch_details])
+                              has_one(:twine_commit_transaction, through: [:twine_batch_details, :commit_transaction])
+                              # has_one(:twine_prove_transaction, through: [:twine_batch_details, :prove_transaction])
+                              has_one(:twine_execute_transaction, through: [:twine_batch_details, :execute_transaction])
+                            end, 2
                           )
 
                         :celo ->

@@ -24,6 +24,7 @@ defmodule Explorer.Chain.Block.Schema do
   alias Explorer.Chain.Zilliqa.AggregateQuorumCertificate, as: ZilliqaAggregateQuorumCertificate
   alias Explorer.Chain.Zilliqa.QuorumCertificate, as: ZilliqaQuorumCertificate
   alias Explorer.Chain.ZkSync.BatchBlock, as: ZkSyncBatchBlock
+  alias Explorer.Chain.Twine.BatchBlock, as: TwineBatchBlock
 
   @chain_type_fields (case @chain_type do
                         :ethereum ->
@@ -68,6 +69,19 @@ defmodule Explorer.Chain.Block.Schema do
                               has_one(:zksync_commit_transaction, through: [:zksync_batch, :commit_transaction])
                               has_one(:zksync_prove_transaction, through: [:zksync_batch, :prove_transaction])
                               has_one(:zksync_execute_transaction, through: [:zksync_batch, :execute_transaction])
+                            end,
+                            2
+                          )
+
+                        :twine ->
+                          elem(
+                            quote do
+                              has_one(:twine_batch_block, TwineBatchBlock, foreign_key: :hash, references: :hash)
+                              has_one(:twine_batch, through: [:twine_batch_block, :batch])
+                              has_many(:twine_batch_details, through: [:twine_batch, :batch_details])
+                              has_one(:twine_commit_transaction, through: [:twine_batch_details, :commit_transaction])
+                              # has_one(:twine_prove_transaction, through: [:twine_batch_details, :prove_transaction])
+                              has_one(:twine_execute_transaction, through: [:twine_batch_details, :execute_transaction])
                             end,
                             2
                           )

@@ -63,6 +63,16 @@ defmodule BlockScoutWeb.API.V2.BlockController do
         :zksync_execute_transaction => :optional
       }
 
+    :twine ->
+      @chain_type_transaction_necessity_by_association %{}
+      @chain_type_block_necessity_by_association %{
+        :twine_batch => :optional,
+        :twine_batch_details => :optional,
+        :twine_commit_transaction => :optional,
+        # :twine_prove_transaction => :optional,
+        :twine_execute_transaction => :optional
+      }
+
     :celo ->
       @chain_type_transaction_necessity_by_association %{
         :gas_token => :optional
