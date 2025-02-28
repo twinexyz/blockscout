@@ -12,7 +12,7 @@ services:
     env_file:
       -  ../envs/common-stats.env
     environment:
-      - STATS__DB_URL=${STATS__DB_URL:-postgresql://twineadmin:Twine2025@twine-explorer-stack-blockscoutdatabase-idsj6jdq2xdj.c5668ykqyr4c.us-east-2.rds.amazonaws.com:5432/stats}
-      - STATS__BLOCKSCOUT_DB_URL=${STATS__BLOCKSCOUT_DB_URL:-postgresql://twineadmin:Twine2025@twine-explorer-stack-blockscoutdatabase-idsj6jdq2xdj.c5668ykqyr4c.us-east-2.rds.amazonaws.com:5432/blockscout}
+      - STATS__DB_URL=${STATS__DB_URL:-postgres://rabindraregmi:admin@host.docker.internal:5432/stats}
+      - STATS__BLOCKSCOUT_DB_URL=${STATS__BLOCKSCOUT_DB_URL:-postgres://rabindraregmi:admin@host.docker.internal:5432/blockscout}
       - STATS__CREATE_DATABASE=${STATS__CREATE_DATABASE:-true}
       - STATS__RUN_MIGRATIONS=${STATS__RUN_MIGRATIONS:-true}
