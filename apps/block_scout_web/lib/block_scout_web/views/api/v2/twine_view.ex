@@ -103,13 +103,19 @@ defmodule BlockScoutWeb.API.V2.TwineView do
   defp do_add_twine_info(out_json, twine_item) do
 
     Map.put(out_json, "twine", %{
-      number: twine_item.number,
-      start_block: twine_item.twine_batch.start_block,
-    end_block: twine_item.twine_batch.end_block,
-    timestamp: twine_item.twine_batch.timestamp,
-    root_hash: twine_item.twine_batch.root_hash,
-      details: render_many(twine_item.twine_batch_details, __MODULE__, "twine_batch_detail.json", as: :twine_batch_detail),
+      number: twine_item.twine_batch && twine_item.twine_batch.number,
+      start_block: twine_item.twine_batch && twine_item.twine_batch.start_block,
+      end_block: twine_item.twine_batch && twine_item.twine_batch.end_block,
+      timestamp: twine_item.twine_batch && twine_item.twine_batch.timestamp,
+      root_hash: twine_item.twine_batch && twine_item.twine_batch.root_hash,
+      details: render_many(
+        (twine_item.twine_batch && twine_item.twine_batch.batch_details) || [],
+        __MODULE__,
+        "twine_batch_detail.json",
+        as: :twine_batch_detail
+      )
     })
+
   end
 
   defp get_batch_number(twine_entity) do
