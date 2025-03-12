@@ -41,7 +41,7 @@ jobs:
           password: ${{ secrets.GH_ACTION_PAT }}
       - name: Build Docker Image
         run: |
-          docker build \
+          docker build -f docker/Dockerfile \
           --build-arg RELEASE_VERSION=7.0.0 \
           --build-arg CHAIN_TYPE=twine \
           -t ghcr.io/${{ env.ORG }}/${{ env.REPO }}:${{ env.BRANCH }}-${GITHUB_SHA} \
