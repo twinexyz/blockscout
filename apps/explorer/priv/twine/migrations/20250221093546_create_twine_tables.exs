@@ -6,6 +6,8 @@ defmodule Explorer.Repo.Twine.Migrations.CreateTwineTables do
       add(:id, :integer, null: false, primary_key: true)
       add(:hash, :bytea, null: false)
       add(:chain_id, :numeric, precision: 100, null: false)
+      add(:l1_transaction_count, :integer, null: false)
+      add(:l1_gas_price, :numeric, precision: 100, null: false)
       add(:timestamp, :"timestamp without time zone", null: false)
       timestamps(null: false, type: :utc_datetime_usec)
     end
@@ -26,9 +28,7 @@ defmodule Explorer.Repo.Twine.Migrations.CreateTwineTables do
     create table(:twine_transaction_batch_detail, primary_key: false) do
       add(:id, :serial, null: false, primary_key: true)
       add(:batch_number, references(:twine_transaction_batch, column: :number, on_delete: :delete_all, on_update: :update_all, type: :integer), null: false)
-      add(:l1_transaction_count, :integer, null: false)
       add(:l2_transaction_count, :integer, null: false)
-      add(:l1_gas_price, :numeric, precision: 100, null: false)
       add(:l2_fair_gas_price, :numeric, precision: 100, null: false)
       add(:chain_id, :numeric, precision: 100, null: false)
 
@@ -42,7 +42,7 @@ defmodule Explorer.Repo.Twine.Migrations.CreateTwineTables do
 
     create table(:twine_batch_l2_transactions, primary_key: false) do
       add(:batch_number, references(:twine_transaction_batch, column: :number, on_delete: :delete_all, on_update: :update_all, type: :integer), null: false)
-      add(:hash, :bytea, null: false, primary_key: true)
+      add(:transaction_hash, :bytea, null: false, primary_key: true)
       timestamps(null: false, type: :utc_datetime_usec)
     end
 
