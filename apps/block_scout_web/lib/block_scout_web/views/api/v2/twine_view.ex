@@ -160,7 +160,7 @@ defmodule BlockScoutWeb.API.V2.TwineView do
       case Map.get(twine_item, key) do
         nil -> Map.put(l1_transactions, key, nil)
         %Ecto.Association.NotLoaded{} -> Map.put(l1_transactions, key, nil)
-        value -> Map.put(l1_transactions, key, %{hash: value.hash, ts: value.timestamp})
+        value -> Map.put(l1_transactions, key, %{hash: Base.encode16(value.hash, case: :lower), ts: value.timestamp})
       end
     end)
   end

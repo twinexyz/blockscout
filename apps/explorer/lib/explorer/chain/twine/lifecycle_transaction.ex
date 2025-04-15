@@ -15,14 +15,14 @@ defmodule Explorer.Chain.Twine.LifecycleTransaction do
   @required_attrs ~w(id hash timestamp)a
 
   @type t :: %__MODULE__{
-          # hash: Hash.t(),
+          hash: binary(),
           timestamp: DateTime.t(),
           chain_id: Wei.t(),
         }
 
   @primary_key {:id, :integer, autogenerate: false}
   schema "twine_lifecycle_l1_transactions" do
-    field(:hash, Hash.Full)
+    field(:hash, :binary)
     field(:timestamp, :utc_datetime_usec)
     field(:chain_id, Wei)
 
