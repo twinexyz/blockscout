@@ -3,7 +3,7 @@ defmodule BlockScoutWeb.API.V2.TwineView do
 
   alias Explorer.Chain.Twine.TransactionBatchDetail
   alias Explorer.Chain.{Block, Transaction}
-  alias Explorer.Chain.Twine.TransactionBatch
+  alias Explorer.Chain.Twine.{TransactionBatch, Reader}
 
   alias BlockScoutWeb.API.V2.Helper, as: APIV2Helper
 
@@ -98,6 +98,7 @@ defmodule BlockScoutWeb.API.V2.TwineView do
 
   def extend_block_json_response(out_json, %Block{} = block) do
     do_add_twine_info(out_json, block)
+    |> do_add_da_info(block)
   end
 
   defp do_add_twine_info(out_json, twine_item) do
@@ -113,9 +114,28 @@ defmodule BlockScoutWeb.API.V2.TwineView do
         __MODULE__,
         "twine_batch_detail.json",
         as: :twine_batch_detail
-      )
+      ),
     })
 
+
+  end
+
+  defp do_add_da_info(out_json, %Block{} = block) do
+    da_info =
+      case Map.get(block, :celestia_blob) do
+        nil ->
+          binary_hash = if is_struct(block.hash), do: block.hash.bytes, else: block.hash
+          case Reader.celestia_commitment_info_by_block(binary_hash, []) do
+            {:ok, info} -> info
+            {:error, _reason} -> %{commitment_hash: nil, namespace: nil, height: nil}
+          end
+        blob ->
+          %{commitment_hash: blob.commitment_hash, namespace: blob.namespace, height: blob.height}
+      end
+
+    Map.put(out_json, "da", %{
+      celestia: da_info
+    })
   end
 
   defp get_batch_number(twine_entity) do

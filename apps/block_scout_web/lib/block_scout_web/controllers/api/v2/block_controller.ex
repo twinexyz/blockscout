@@ -70,7 +70,8 @@ defmodule BlockScoutWeb.API.V2.BlockController do
         :twine_batch_details => :optional,
         :twine_commit_transaction => :optional,
         # :twine_prove_transaction => :optional,
-        :twine_execute_transaction => :optional
+        :twine_execute_transaction => :optional,
+        :celestia_blob => :optional
       }
 
     :celo ->
@@ -131,7 +132,8 @@ defmodule BlockScoutWeb.API.V2.BlockController do
         :nephews => :optional,
         :rewards => :optional,
         :transactions => :optional,
-        :withdrawals => :optional
+        :withdrawals => :optional,
+        :celestia_blob => :optional
       }
       |> Map.merge(@chain_type_block_necessity_by_association),
     api?: true

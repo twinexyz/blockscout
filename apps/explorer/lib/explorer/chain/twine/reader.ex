@@ -1,6 +1,8 @@
 defmodule Explorer.Chain.Twine.Reader do
   @moduledoc "Reads data from the Twine chain."
 
+  require Logger
+
   import Ecto.Query,
     only: [
       from: 2,
@@ -15,8 +17,15 @@ defmodule Explorer.Chain.Twine.Reader do
 
   import Explorer.Chain, only: [select_repo: 1]
 
-  alias Explorer.Chain.Twine.{TransactionBatch, TransactionBatchDetail, BatchBlock, LifecycleTransaction}
+  alias Explorer.Chain.Twine.{
+    TransactionBatch,
+    TransactionBatchDetail,
+    BatchBlock,
+    LifecycleTransaction,
+    CelestiaBlob
+  }
 
+  alias Explorer.Chain.Hash
   alias Explorer.{Chain, PagingOptions, Repo}
 
   @doc """
@@ -147,5 +156,34 @@ defmodule Explorer.Chain.Twine.Reader do
 
   defp page_batches(query, %PagingOptions{key: {number}}) do
     from(tb in query, where: tb.number < ^number)
+  end
+
+  @doc """
+    Returns the commitment hash, namespace, and height for a given Twine block hash.
+
+    ## Examples
+
+        iex> Explorer.Chain.Twine.Reader.celestia_commitment_info_by_block("0x123...", %{})
+        {:ok, %{commitment_hash: "0xabc...", namespace: "celestia-namespace-01", height: 0}}
+  """
+  @spec celestia_commitment_info_by_block(Hash.t(), keyword()) :: {:ok, %{commitment_hash: String.t(), namespace: String.t(), height: integer()}} | {:error, :not_found}
+  def celestia_commitment_info_by_block(block_hash, options \\ [])
+  def celestia_commitment_info_by_block(%Explorer.Chain.Hash{bytes: bytes}, options) do
+    celestia_commitment_info_by_block(bytes, options)
+  end
+  def celestia_commitment_info_by_block(block_hash, options) when is_binary(block_hash) do
+    query =
+      from(b in CelestiaBlob,
+        where: b.twine_block_hash == ^block_hash,
+        select: %{commitment_hash: b.commitment_hash, namespace: b.namespace, height: b.height},
+        limit: 1
+      )
+
+    result = select_repo(options).one(query)
+
+    case result do
+      nil -> {:error, :not_found}
+      info -> {:ok, info}
+    end
   end
 end
