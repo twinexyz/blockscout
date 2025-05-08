@@ -55,5 +55,17 @@ defmodule Explorer.Repo.Twine.Migrations.CreateTwineTables do
     end
 
     create(index(:twine_batch_l2_blocks, :batch_number))
+
+    create table(:celestia_blobs, primary_key: false) do
+      add(:twine_block_hash, :bytea, null: false, primary_key: true)
+      add(:commitment_hash, :string, null: false)
+      add(:namespace, :string, null: false)
+      add(:height, :bigint, null: false)
+      add(:data, :bytea, null: false)
+      timestamps(null: false, type: :utc_datetime_usec)
+    end
+
+    create(index(:celestia_blobs, [:twine_block_hash]))
+    create(index(:celestia_blobs, [:commitment_hash]))
   end
 end
