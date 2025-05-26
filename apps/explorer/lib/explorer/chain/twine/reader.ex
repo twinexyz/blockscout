@@ -21,7 +21,6 @@ defmodule Explorer.Chain.Twine.Reader do
     TransactionBatch,
     TransactionBatchDetail,
     BatchBlock,
-    LifecycleTransaction,
     CelestiaBlob
   }
 
@@ -51,11 +50,7 @@ defmodule Explorer.Chain.Twine.Reader do
       order_by: [desc: b.number],
       left_join: d in TransactionBatchDetail,
       on: d.batch_number == b.number,
-      left_join: commit_tx in LifecycleTransaction,
-      on: d.commit_id == commit_tx.id,
-      left_join: execute_tx in LifecycleTransaction,
-      on: d.execute_id == execute_tx.id,
-      preload: [batch_details: {d, commit_transaction: commit_tx, execute_transaction: execute_tx}]
+      preload: [batch_details: d]
     )
   end
 

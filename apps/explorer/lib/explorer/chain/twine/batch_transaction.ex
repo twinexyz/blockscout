@@ -13,11 +13,11 @@ defmodule Explorer.Chain.Twine.BatchTransaction do
   alias Explorer.Chain.{Hash, Transaction}
   alias Explorer.Chain.Twine.TransactionBatch
 
-  @required_attrs ~w(batch_number transaction_hash)a
+  @required_attrs ~w(batch_number hash)a
 
   @typedoc """
-    * `transaction_hash` - The hash of the rollup transaction.
-    * `l2_transaction` - An instance of `Explorer.Chain.Transaction` referenced by `transaction_hash`.
+    * `hash` - The hash of the rollup transaction.
+    * `l2_transaction` - An instance of `Explorer.Chain.Transaction` referenced by `hash`.
     * `batch_number` - The number of the Twine batch.
     * `batch` - An instance of `Explorer.Chain.Twine.TransactionBatch` referenced by `batch_number`.
   """
@@ -26,7 +26,7 @@ defmodule Explorer.Chain.Twine.BatchTransaction do
     belongs_to(:batch, TransactionBatch, foreign_key: :batch_number, references: :number, type: :integer)
 
     belongs_to(:l2_transaction, Transaction,
-      foreign_key: :transaction_hash,
+      foreign_key: :hash,
       primary_key: true,
       references: :hash,
       type: Hash.Full
@@ -35,6 +35,7 @@ defmodule Explorer.Chain.Twine.BatchTransaction do
     timestamps()
   end
 
+  @spec changeset(Explorer.Chain.Twine.BatchTransaction.t()) :: Ecto.Changeset.t()
   @doc """
     Validates that the `attrs` are valid.
   """
@@ -44,6 +45,6 @@ defmodule Explorer.Chain.Twine.BatchTransaction do
     |> cast(attrs, @required_attrs)
     |> validate_required(@required_attrs)
     |> foreign_key_constraint(:batch_number)
-    |> unique_constraint(:transaction_hash)
+    |> unique_constraint(:hash)
   end
 end

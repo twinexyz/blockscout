@@ -1,5 +1,5 @@
 defmodule Explorer.Chain.Twine.TransactionBatch do
-  @moduledoc "Models a batch of transactions for ZkSync."
+  @moduledoc "Models a batch of transactions for Twine."
 
   use Explorer.Schema
 

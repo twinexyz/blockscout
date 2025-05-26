@@ -2,17 +2,6 @@ defmodule Explorer.Repo.Twine.Migrations.CreateTwineTables do
   use Ecto.Migration
 
   def change do
-    create table(:twine_lifecycle_l1_transactions, primary_key: false) do
-      add(:id, :integer, null: false, primary_key: true)
-      add(:hash, :bytea, null: false)
-      add(:chain_id, :numeric, precision: 100, null: false)
-      add(:timestamp, :"timestamp without time zone", null: false)
-      timestamps(null: false, type: :utc_datetime_usec)
-    end
-
-    create(unique_index(:twine_lifecycle_l1_transactions, :hash))
-
-
     create table(:twine_transaction_batch, primary_key: false) do
       add(:number, :integer, null: false, primary_key: true)
       add(:start_block, :integer, null: false)
@@ -22,7 +11,6 @@ defmodule Explorer.Repo.Twine.Migrations.CreateTwineTables do
       timestamps(null: false, type: :utc_datetime_usec)
     end
 
-
     create table(:twine_transaction_batch_detail, primary_key: false) do
       add(:id, :serial, null: false, primary_key: true)
       add(:batch_number, references(:twine_transaction_batch, column: :number, on_delete: :delete_all, on_update: :update_all, type: :integer), null: false)
@@ -31,10 +19,10 @@ defmodule Explorer.Repo.Twine.Migrations.CreateTwineTables do
       add(:l1_gas_price, :numeric, precision: 100, null: false)
       add(:l2_fair_gas_price, :numeric, precision: 100, null: false)
       add(:chain_id, :numeric, precision: 100, null: false)
-
-      add(:commit_id, references(:twine_lifecycle_l1_transactions, on_delete: :restrict, on_update: :update_all, type: :integer), null: true)
-      add(:execute_id, references(:twine_lifecycle_l1_transactions, on_delete: :restrict, on_update: :update_all, type: :integer), null: true)
-
+      add(:commit_transaction_hash, :bytea, null: true)
+      add(:finalize_transaction_hash, :bytea, null: true)
+      add(:committed_at, :utc_datetime_usec, null: true)
+      add(:finalized_at, :utc_datetime_usec, null: true)
       timestamps(null: false, type: :utc_datetime_usec)
     end
 

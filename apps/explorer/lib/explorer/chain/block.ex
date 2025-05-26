@@ -79,9 +79,7 @@ defmodule Explorer.Chain.Block.Schema do
                               has_one(:twine_batch_block, TwineBatchBlock, foreign_key: :hash, references: :hash)
                               has_one(:twine_batch, through: [:twine_batch_block, :batch])
                               has_many(:twine_batch_details, through: [:twine_batch, :batch_details])
-                              has_one(:twine_commit_transaction, through: [:twine_batch_details, :commit_transaction])
-                              # has_one(:twine_prove_transaction, through: [:twine_batch_details, :prove_transaction])
-                              has_one(:twine_execute_transaction, through: [:twine_batch_details, :execute_transaction])
+                              has_one(:twine_finalize_transaction_hash, through: [:twine_batch_details, :finalize_transaction_hash])
                               has_one(:celestia_blob, Explorer.Chain.Twine.CelestiaBlob, foreign_key: :twine_block_hash, references: :hash)
                             end,
                             2
