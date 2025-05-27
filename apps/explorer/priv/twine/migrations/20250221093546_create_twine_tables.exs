@@ -28,22 +28,6 @@ defmodule Explorer.Repo.Twine.Migrations.CreateTwineTables do
 
     create(index(:twine_transaction_batch_detail, :batch_number))
 
-    create table(:twine_batch_l2_transactions, primary_key: false) do
-      add(:batch_number, references(:twine_transaction_batch, column: :number, on_delete: :delete_all, on_update: :update_all, type: :integer), null: false)
-      add(:hash, :bytea, null: false, primary_key: true)
-      timestamps(null: false, type: :utc_datetime_usec)
-    end
-
-    create(index(:twine_batch_l2_transactions, :batch_number))
-
-    create table(:twine_batch_l2_blocks, primary_key: false) do
-      add(:batch_number, references(:twine_transaction_batch, column: :number, on_delete: :delete_all, on_update: :update_all, type: :integer), null: false)
-      add(:hash, :bytea, null: false, primary_key: true)
-      timestamps(null: false, type: :utc_datetime_usec)
-    end
-
-    create(index(:twine_batch_l2_blocks, :batch_number))
-
     create table(:celestia_blobs, primary_key: false) do
       add(:twine_block_hash, :bytea, null: false, primary_key: true)
       add(:commitment_hash, :string, null: false)
@@ -55,5 +39,19 @@ defmodule Explorer.Repo.Twine.Migrations.CreateTwineTables do
 
     create(index(:celestia_blobs, [:twine_block_hash]))
     create(index(:celestia_blobs, [:commitment_hash]))
+
+    # Add batch_number to transactions table
+    alter table(:transactions) do
+      add(:batch_number, references(:twine_transaction_batch, column: :number, on_delete: :nilify_all, on_update: :update_all, type: :integer), null: true)
+    end
+
+    create(index(:transactions, :batch_number))
+
+    # Add batch_number to blocks table
+    alter table(:blocks) do
+      add(:batch_number, references(:twine_transaction_batch, column: :number, on_delete: :nilify_all, on_update: :update_all, type: :integer), null: true)
+    end
+
+    create(index(:blocks, :batch_number))
   end
 end

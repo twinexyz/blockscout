@@ -139,11 +139,11 @@ defmodule Explorer.Chain.Transaction.Schema do
                         :twine ->
                           elem(
                             quote do
-                              has_one(:twine_batch_transaction, TwineBatchTransaction,
-                                foreign_key: :hash,
-                                references: :hash
+                              belongs_to(:twine_batch, Explorer.Chain.Twine.TransactionBatch,
+                                foreign_key: :batch_number,
+                                references: :number,
+                                type: :integer
                               )
-                              has_one(:twine_batch, through: [:twine_batch_transaction, :batch])
                               has_many(:twine_batch_details, through: [:twine_batch, :batch_details])
                             end, 2
                           )
