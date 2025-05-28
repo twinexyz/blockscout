@@ -4,12 +4,13 @@ defmodule Explorer.Repo.Twine.Migrations.CreateTwineTables do
   def change do
     create table(:twine_transaction_batch, primary_key: false) do
       add(:number, :bigint, null: false, primary_key: true)
-      add(:start_block, :bigint, null: false)
-      add(:end_block, :bigint, null: false)
+      add(:start_block, :bigint, null: false, unique: true)
+      add(:end_block, :bigint, null: false, unique: true)
       add(:timestamp, :utc_datetime_usec, null: false)
-      add(:root_hash, :bytea, null: false)
-      timestamps(null: false, type: :utc_datetime_usec)
+      add(:root_hash, :bytea, null: false, unique: true)
+      timestamps(null: false, type: :utc_datetime_usec, default: fragment("CURRENT_TIMESTAMP"))
     end
+
 
     create table(:twine_transaction_batch_detail, primary_key: false) do
       add(:id, :serial, null: false, primary_key: true)
@@ -23,10 +24,10 @@ defmodule Explorer.Repo.Twine.Migrations.CreateTwineTables do
       add(:finalize_transaction_hash, :bytea, null: true)
       add(:committed_at, :utc_datetime_usec, null: true)
       add(:finalized_at, :utc_datetime_usec, null: true)
-      timestamps(null: false, type: :utc_datetime_usec)
+      timestamps(null: false, type: :utc_datetime_usec, default: fragment("CURRENT_TIMESTAMP"))
     end
 
-    create(index(:twine_transaction_batch_detail, :batch_number))
+    create unique_index(:twine_transaction_batch_detail, [:batch_number, :chain_id])
 
     create table(:celestia_blobs, primary_key: false) do
       add(:twine_block_hash, :bytea, null: false, primary_key: true)
@@ -34,7 +35,7 @@ defmodule Explorer.Repo.Twine.Migrations.CreateTwineTables do
       add(:namespace, :string, null: false)
       add(:height, :bigint, null: false)
       add(:data, :bytea, null: false)
-      timestamps(null: false, type: :utc_datetime_usec)
+      timestamps(null: false, type: :utc_datetime_usec, default: fragment("CURRENT_TIMESTAMP"))
     end
 
     create(index(:celestia_blobs, [:twine_block_hash]))
