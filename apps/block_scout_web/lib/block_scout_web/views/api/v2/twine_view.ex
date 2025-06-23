@@ -3,7 +3,7 @@ defmodule BlockScoutWeb.API.V2.TwineView do
 
   alias Explorer.Chain.Twine.TransactionBatchDetail
   alias Explorer.Chain.{Block, Transaction}
-  alias Explorer.Chain.Twine.TransactionBatch
+  alias Explorer.Chain.Twine.{TransactionBatch, Reader}
 
   alias BlockScoutWeb.API.V2.Helper, as: APIV2Helper
 
@@ -98,6 +98,7 @@ defmodule BlockScoutWeb.API.V2.TwineView do
 
   def extend_block_json_response(out_json, %Block{} = block) do
     do_add_twine_info(out_json, block)
+    |> do_add_da_info(block)
   end
 
   defp do_add_twine_info(out_json, twine_item) do
@@ -113,9 +114,28 @@ defmodule BlockScoutWeb.API.V2.TwineView do
         __MODULE__,
         "twine_batch_detail.json",
         as: :twine_batch_detail
-      )
+      ),
     })
 
+
+  end
+
+  defp do_add_da_info(out_json, %Block{} = block) do
+    da_info =
+      case Map.get(block, :celestia_blob) do
+        nil ->
+          binary_hash = if is_struct(block.hash), do: block.hash.bytes, else: block.hash
+          case Reader.celestia_commitment_info_by_block(binary_hash, []) do
+            {:ok, info} -> info
+            {:error, _reason} -> %{commitment_hash: nil, namespace: nil, height: nil}
+          end
+        blob ->
+          %{commitment_hash: blob.commitment_hash, namespace: blob.namespace, height: blob.height}
+      end
+
+    Map.put(out_json, "da", %{
+      celestia: da_info
+    })
   end
 
   defp get_batch_number(twine_entity) do
@@ -131,38 +151,14 @@ defmodule BlockScoutWeb.API.V2.TwineView do
   end
 
   defp do_add_l1_transactions_info_and_status(out_json, twine_item) do
-    l1_transactions = get_associated_l1_transactions(twine_item)
-
-
     out_json
     |> Map.merge(%{
       "status" => batch_status(twine_item),
-      "commit_transaction_hash" => APIV2Helper.get_2map_data(l1_transactions, :commit_transaction, :hash),
-      "commit_transaction_timestamp" => APIV2Helper.get_2map_data(l1_transactions, :commit_transaction, :ts),
-      "prove_transaction_hash" => APIV2Helper.get_2map_data(l1_transactions, :prove_transaction, :hash),
-      "prove_transaction_timestamp" => APIV2Helper.get_2map_data(l1_transactions, :prove_transaction, :ts),
-      "execute_transaction_hash" => APIV2Helper.get_2map_data(l1_transactions, :execute_transaction, :hash),
-      "execute_transaction_timestamp" => APIV2Helper.get_2map_data(l1_transactions, :execute_transaction, :ts)
+      "commit_transaction_hash" => twine_item.commit_transaction_hash,
+      "commit_transaction_timestamp" => twine_item.committed_at,
+      "finalize_transaction_hash" => twine_item.finalize_transaction_hash,
+      "finalize_transaction_timestamp" => twine_item.finalized_at
     })
-  end
-
-  # Extract transaction hash and timestamp for L1 transactions associated with
-  # a twine rollup entity: batch, transaction or block.
-  #
-  # ## Parameters
-  # - `twine_item`: A batch, transaction, or block.
-  #
-  # ## Returns
-  # A map containing nesting maps describing corresponding L1 transactions
-  defp get_associated_l1_transactions(twine_item) do
-    [:commit_transaction, :execute_transaction]
-    |> Enum.reduce(%{}, fn key, l1_transactions ->
-      case Map.get(twine_item, key) do
-        nil -> Map.put(l1_transactions, key, nil)
-        %Ecto.Association.NotLoaded{} -> Map.put(l1_transactions, key, nil)
-        value -> Map.put(l1_transactions, key, %{hash: Base.encode16(value.hash, case: :lower), ts: value.timestamp})
-      end
-    end)
   end
 
   # Inspects L1 transactions of the batch to determine the batch status.
@@ -174,13 +170,12 @@ defmodule BlockScoutWeb.API.V2.TwineView do
   # A string with one of predefined statuses
   defp batch_status(twine_item) do
     cond do
-      APIV2Helper.specified?(twine_item.execute_transaction) -> "Executed on L1"
-      APIV2Helper.specified?(twine_item.prove_transaction) -> "Validated on L1"
-      APIV2Helper.specified?(twine_item.commit_transaction) -> "Sent to L1"
+      APIV2Helper.specified?(twine_item.finalize_transaction_hash) -> "Finalized on L1"
+      APIV2Helper.specified?(twine_item.commit_transaction_hash) -> "Sent to L1"
       # Batch entity itself has no batch_number
       not Map.has_key?(twine_item, :batch_number) -> "Sealed on L2"
       not is_nil(twine_item.batch_number) -> "Sealed on L2"
-      true -> "Processed on L2"
+      true -> "Pending"
     end
   end
 end

@@ -2,58 +2,57 @@ defmodule Explorer.Repo.Twine.Migrations.CreateTwineTables do
   use Ecto.Migration
 
   def change do
-    create table(:twine_lifecycle_l1_transactions, primary_key: false) do
-      add(:id, :integer, null: false, primary_key: true)
-      add(:hash, :bytea, null: false)
-      add(:chain_id, :numeric, precision: 100, null: false)
-      add(:timestamp, :"timestamp without time zone", null: false)
-      timestamps(null: false, type: :utc_datetime_usec)
-    end
-
-    create(unique_index(:twine_lifecycle_l1_transactions, :hash))
-
-
     create table(:twine_transaction_batch, primary_key: false) do
-      add(:number, :integer, null: false, primary_key: true)
-      add(:start_block, :integer, null: false)
-      add(:end_block, :integer, null: false)
+      add(:number, :bigint, null: false, primary_key: true)
+      add(:start_block, :bigint, null: false, unique: true)
+      add(:end_block, :bigint, null: false, unique: true)
       add(:timestamp, :utc_datetime_usec, null: false)
-      add(:root_hash, :bytea, null: false)
-      timestamps(null: false, type: :utc_datetime_usec)
+      add(:root_hash, :bytea, null: false, unique: true)
+      timestamps(null: false, type: :utc_datetime_usec, default: fragment("CURRENT_TIMESTAMP"))
     end
 
 
     create table(:twine_transaction_batch_detail, primary_key: false) do
       add(:id, :serial, null: false, primary_key: true)
-      add(:batch_number, references(:twine_transaction_batch, column: :number, on_delete: :delete_all, on_update: :update_all, type: :integer), null: false)
+      add(:batch_number, references(:twine_transaction_batch, column: :number, on_delete: :delete_all, on_update: :update_all, type: :bigint), null: false)
       add(:l1_transaction_count, :integer, null: false)
       add(:l2_transaction_count, :integer, null: false)
       add(:l1_gas_price, :numeric, precision: 100, null: false)
       add(:l2_fair_gas_price, :numeric, precision: 100, null: false)
       add(:chain_id, :numeric, precision: 100, null: false)
-
-      add(:commit_id, references(:twine_lifecycle_l1_transactions, on_delete: :restrict, on_update: :update_all, type: :integer), null: true)
-      add(:execute_id, references(:twine_lifecycle_l1_transactions, on_delete: :restrict, on_update: :update_all, type: :integer), null: true)
-
-      timestamps(null: false, type: :utc_datetime_usec)
+      add(:commit_transaction_hash, :bytea, null: true)
+      add(:finalize_transaction_hash, :bytea, null: true)
+      add(:committed_at, :utc_datetime_usec, null: true)
+      add(:finalized_at, :utc_datetime_usec, null: true)
+      timestamps(null: false, type: :utc_datetime_usec, default: fragment("CURRENT_TIMESTAMP"))
     end
 
-    create(index(:twine_transaction_batch_detail, :batch_number))
+    create unique_index(:twine_transaction_batch_detail, [:batch_number, :chain_id])
 
-    create table(:twine_batch_l2_transactions, primary_key: false) do
-      add(:batch_number, references(:twine_transaction_batch, column: :number, on_delete: :delete_all, on_update: :update_all, type: :integer), null: false)
-      add(:hash, :bytea, null: false, primary_key: true)
-      timestamps(null: false, type: :utc_datetime_usec)
+    create table(:celestia_blobs, primary_key: false) do
+      add(:twine_block_hash, :bytea, null: false, primary_key: true)
+      add(:commitment_hash, :string, null: false)
+      add(:namespace, :string, null: false)
+      add(:height, :bigint, null: false)
+      add(:data, :bytea, null: false)
+      timestamps(null: false, type: :utc_datetime_usec, default: fragment("CURRENT_TIMESTAMP"))
     end
 
-    create(index(:twine_batch_l2_transactions, :batch_number))
+    create(index(:celestia_blobs, [:twine_block_hash]))
+    create(index(:celestia_blobs, [:commitment_hash]))
 
-    create table(:twine_batch_l2_blocks, primary_key: false) do
-      add(:batch_number, references(:twine_transaction_batch, column: :number, on_delete: :delete_all, on_update: :update_all, type: :integer), null: false)
-      add(:hash, :bytea, null: false, primary_key: true)
-      timestamps(null: false, type: :utc_datetime_usec)
+    # Add batch_number to transactions table
+    alter table(:transactions) do
+      add(:batch_number, references(:twine_transaction_batch, column: :number, on_delete: :nilify_all, on_update: :update_all, type: :bigint), null: true)
     end
 
-    create(index(:twine_batch_l2_blocks, :batch_number))
+    create(index(:transactions, :batch_number))
+
+    # Add batch_number to blocks table
+    alter table(:blocks) do
+      add(:batch_number, references(:twine_transaction_batch, column: :number, on_delete: :nilify_all, on_update: :update_all, type: :bigint), null: true)
+    end
+
+    create(index(:blocks, :batch_number))
   end
 end

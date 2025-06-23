@@ -1,5 +1,5 @@
 defmodule Explorer.Chain.Twine.TransactionBatch do
-  @moduledoc "Models a batch of transactions for ZkSync."
+  @moduledoc "Models a batch of transactions for Twine."
 
   use Explorer.Schema
 
@@ -30,8 +30,8 @@ defmodule Explorer.Chain.Twine.TransactionBatch do
     field(:end_block, :integer)
 
     has_many(:batch_details, TransactionBatchDetail, foreign_key: :batch_number)
-
-    has_many(:l2_transactions, BatchTransaction, foreign_key: :batch_number)
+    has_many(:transactions, Explorer.Chain.Transaction, foreign_key: :batch_number)
+    has_many(:blocks, Explorer.Chain.Block, foreign_key: :batch_number)
 
     timestamps()
   end
