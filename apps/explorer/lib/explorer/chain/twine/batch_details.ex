@@ -24,8 +24,8 @@ defmodule Explorer.Chain.Twine.TransactionBatchDetail do
           chain_id: Wei.t(),
           batch_number: non_neg_integer(),
           batch: %Ecto.Association.NotLoaded{} | TransactionBatch.t() | nil,
-          commit_transaction_hash: Hash.t() | nil,
-          finalize_transaction_hash: Hash.t() | nil
+          commit_transaction_hash: String.t() | nil,
+          finalize_transaction_hash: String.t() | nil
         }
 
   @primary_key {:id, :id, autogenerate: true}
@@ -35,8 +35,8 @@ defmodule Explorer.Chain.Twine.TransactionBatchDetail do
     field(:l1_gas_price, Wei)
     field(:l2_fair_gas_price, Wei)
     field(:chain_id, Wei)
-    field(:commit_transaction_hash, Hash.Full)
-    field(:finalize_transaction_hash, Hash.Full)
+    field(:commit_transaction_hash, :string)
+    field(:finalize_transaction_hash, :string)
     field(:committed_at, :utc_datetime_usec)
     field(:finalized_at, :utc_datetime_usec)
 
