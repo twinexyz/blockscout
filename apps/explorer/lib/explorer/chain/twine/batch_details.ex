@@ -11,7 +11,7 @@ defmodule Explorer.Chain.Twine.TransactionBatchDetail do
 
   alias Explorer.Chain.Twine.{BatchTransaction, TransactionBatch}
 
-  @optional_attrs ~w(commit_transaction_hash finalize_transaction_hash)a
+  @optional_attrs ~w(finalize_transaction_hash)a
 
   @required_attrs ~w(number timestamp chain_id l1_transaction_count l2_transaction_count l1_gas_price l2_fair_gas_price)a
 
@@ -24,7 +24,6 @@ defmodule Explorer.Chain.Twine.TransactionBatchDetail do
           chain_id: Wei.t(),
           batch_number: non_neg_integer(),
           batch: %Ecto.Association.NotLoaded{} | TransactionBatch.t() | nil,
-          commit_transaction_hash: String.t() | nil,
           finalize_transaction_hash: String.t() | nil
         }
 
@@ -35,9 +34,7 @@ defmodule Explorer.Chain.Twine.TransactionBatchDetail do
     field(:l1_gas_price, Wei)
     field(:l2_fair_gas_price, Wei)
     field(:chain_id, Wei)
-    field(:commit_transaction_hash, :string)
     field(:finalize_transaction_hash, :string)
-    field(:committed_at, :utc_datetime_usec)
     field(:finalized_at, :utc_datetime_usec)
 
     belongs_to(:batch, TransactionBatch, foreign_key: :batch_number, references: :number, type: :integer)

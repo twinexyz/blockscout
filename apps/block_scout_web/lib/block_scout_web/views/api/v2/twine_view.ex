@@ -154,8 +154,8 @@ defmodule BlockScoutWeb.API.V2.TwineView do
     out_json
     |> Map.merge(%{
       "status" => batch_status(twine_item),
-      "commit_transaction_hash" => twine_item.commit_transaction_hash,
-      "commit_transaction_timestamp" => twine_item.committed_at,
+      # "commit_transaction_hash" => twine_item.commit_transaction_hash,
+      # "commit_transaction_timestamp" => twine_item.committed_at,
       "finalize_transaction_hash" => twine_item.finalize_transaction_hash,
       "finalize_transaction_timestamp" => twine_item.finalized_at
     })
@@ -171,7 +171,7 @@ defmodule BlockScoutWeb.API.V2.TwineView do
   defp batch_status(twine_item) do
     cond do
       APIV2Helper.specified?(twine_item.finalize_transaction_hash) -> "Finalized on L1"
-      APIV2Helper.specified?(twine_item.commit_transaction_hash) -> "Sent to L1"
+      # APIV2Helper.specified?(twine_item.commit_transaction_hash) -> "Sent to L1"
       # Batch entity itself has no batch_number
       not Map.has_key?(twine_item, :batch_number) -> "Sealed on L2"
       not is_nil(twine_item.batch_number) -> "Sealed on L2"

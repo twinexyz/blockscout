@@ -14,7 +14,6 @@ defmodule BlockScoutWeb.API.V2.TwineController do
 
   @batch_necessity_by_association %{
     # :batch_details => :required,
-    :commit_transaction_hash => :optional,
     :finalize_transaction_hash => :optional
     # # # :prove_transaction => :optional,
     # :execute_transaction => :optional
