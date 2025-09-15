@@ -4,12 +4,11 @@ on:
   push:
     branches:
       - 'twine'
-    tags:
-      - '**'  # This will trigger on all tags
+      - 'staging'
   pull_request:
     branches:
       - 'twine'
-
+      - 'staging'
 jobs:
   pre-notify:
     uses: twinexyz/workflows/.github/workflows/notify.yml@main
@@ -25,33 +24,6 @@ jobs:
       workflow_name: ${{ github.workflow }}
       run_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
       job_status: started
-  #precommit:
-  #  needs: ["pre-notify"]
-  #  uses: twinexyz/workflows/.github/workflows/precommit.yml@main
-  #  secrets: inherit
-  #dependency-check:
-  #  needs: ["pre-notify"] #, "precommit"]
-  #  uses: twinexyz/workflows/.github/workflows/dependency-review.yml@main
-  #  secrets: inherit
-  #  with:
-  #    branch_slug: ${{ github.ref_name }}
-  #semgrep:
-  #  needs: ["pre-notify"] #, "precommit"]
-  #  uses: twinexyz/workflows/.github/workflows/semgrep.yml@main
-  #  secrets: inherit
-  #test:
-  #  needs: ["pre-notify"] #, "precommit"]
-  #  uses: twinexyz/workflows/.github/workflows/test.yml@main
-  #  secrets: inherit
-  #audit:
-  #  needs: ["pre-notify"] #, "precommit"]
-  #  uses: twinexyz/workflows/.github/workflows/audit.yml@main
-  #  secrets: inherit
-  #file-scan:
-  #  needs: ["pre-notify"] #, "precommit"]
-  #  uses: twinexyz/workflows/.github/workflows/file-scan.yml@main
-  #  secrets: inherit
-  #
   build:
     needs: ["pre-notify"]
     uses: twinexyz/workflows/.github/workflows/build-matrix.yml@main
@@ -70,7 +42,6 @@ jobs:
       repo_name: ${{ github.event.repository.name }}
   deploy:
     needs: ["build"]
-    #needs: ["pre-notify", "build-amd64", "build-arm64"]
     uses: twinexyz/workflows/.github/workflows/deploy.yml@main
     secrets: inherit
     with:
@@ -80,7 +51,6 @@ jobs:
       app_name: "blockscout"
   post-notify:
     if: always()
-    #needs: ["pre-notify", "precommit", "build"]
     needs: ["pre-notify", "build", "deploy"]
     uses: twinexyz/workflows/.github/workflows/notify.yml@main
     secrets: inherit
