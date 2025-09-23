@@ -50,30 +50,30 @@ jobs:
         run: |
           docker push ghcr.io/${{ env.ORG }}/${{ env.REPO }}:${{ env.BRANCH }}-${GITHUB_SHA}
 
-  # deploy:
-  #   name: Deploy Latest Tag
-  #   runs-on: ubuntu-24.04
-  #   #if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/dev'
-  #   if: github.ref == 'refs/heads/develop'
-  #   needs: ["build_and_push"]
-  #   permissions:
-  #     id-token: write
-  #     contents: read
-  #   steps:
-  #     - uses: step-security/harden-runner@446798f8213ac2e75931c1b0769676d927801858 # v2.10.3
-  #       with:
-  #         egress-policy: audit
-  #     - name: Checkout tools repo
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: twinexyz/argocd
-  #         path: argocd
-  #         token: ${{ secrets.GH_ACTION_PAT  }}
-  #     - name: Update Tag in Helm Values for argocd
-  #       run: |
-  #           cd argocd/apps/values/${{ env.REPO }} &&  sed -i "/tag:/s/tag:.*/tag: ${{ env.BRANCH }}-${GITHUB_SHA}/" staging-merkora.yaml
-  #           git config --global user.email "devops@twinelabs.xyz"
-  #           git config --global user.name "twinebot"
-  #           git add .
-  #           git commit --allow-empty -m "updated image tag to ${GITHUB_SHA} for ${{ env.REPO }}"
-  #           git push origin main
+  deploy:
+    name: Deploy Latest Tag
+    runs-on: ubuntu-24.04
+    needs: ["build_and_push"]
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: step-security/harden-runner@446798f8213ac2e75931c1b0769676d927801858 # v2.10.3
+        with:
+          egress-policy: audit
+      - name: Checkout tools repo
+        uses: actions/checkout@v4
+        with:
+          repository: twinexyz/argocd
+          path: argocd
+          token: ${{ secrets.GH_ACTION_PAT  }}
+      - name: Update Tag in Helm Values for argocd
+        run: |
+            ls -al
+            cd argocd/apps/values/${{ env.REPO }}/staging &&  sed -i "/tag:/s/tag:.*/tag: ${{ env.BRANCH }}-${GITHUB_SHA}/" blockscout.yaml
+            git config --global user.email "devops@twinelabs.xyz"
+            git config --global user.name "pen-pal"
+            git add .
+            git commit --allow-empty -m "updated image tag to ${GITHUB_SHA} for ${{ env.REPO }}"
+            git push origin main
