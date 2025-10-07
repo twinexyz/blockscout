@@ -39,16 +39,36 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GH_ACTION_PAT }}
-      - name: Build Docker Image
-        run: |
-          docker build -f docker/Dockerfile \
-          --build-arg RELEASE_VERSION=7.0.0 \
-          --build-arg CHAIN_TYPE=twine \
-          -t ghcr.io/${{ env.ORG }}/${{ env.REPO }}:${{ env.BRANCH }}-${GITHUB_SHA} \
-          .
-      - name: Push Docker Image
-        run: |
-          docker push ghcr.io/${{ env.ORG }}/${{ env.REPO }}:${{ env.BRANCH }}-${GITHUB_SHA}
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ghcr.io/${{ env.ORG }}/${{ env.REPO }}:${{ env.BRANCH }}-${{ github.sha }},ghcr.io/${{ env.ORG }}/${{ env.REPO }}:${{ env.BRANCH }}-latest
+          cache-from: type=local,src=${{ runner.temp }}/.buildx-cache
+          cache-to: type=local,dest=${{ runner.temp }}/.buildx-cache-new,mode=max
+          file: docker/Dockerfile 
+          build-args: |
+            RELEASE_VERSION=7.0.0
+            CHAIN_TYPE=twine
+            
+      # - name: Build Docker Image
+      #   run: |
+      #     docker build -f docker/Dockerfile \
+      #     --build-arg RELEASE_VERSION=7.0.0 \
+      #     --build-arg CHAIN_TYPE=twine \
+      #     -t ghcr.io/${{ env.ORG }}/${{ env.REPO }}:${{ env.BRANCH }}-${GITHUB_SHA} \
+      #     .
+      # - name: Push Docker Image
+      #   run: |
+      #     docker push ghcr.io/${{ env.ORG }}/${{ env.REPO }}:${{ env.BRANCH }}-${GITHUB_SHA}
 
   deploy:
     name: Deploy Latest Tag
