@@ -3,108 +3,384 @@ name: Build and Deploy
 on:
   push:
     branches:
-      - 'twine'  # This will trigger on all branches
+      - 'main'
+      - 'staging'
+      - 'develop'
     tags:
       - '**'  # This will trigger on all tags
+    paths-ignore:
+      - '.github/workflows/**'
   pull_request:
+    branches:
+      - 'main'
+      - 'staging'
+      - 'develop'
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+ group: ${{ github.workflow }}-${{ github.ref }}
+ cancel-in-progress: true
 
 env:
   BRANCH: ${{ github.ref_name }}
   REPO: ${{ github.event.repository.name }}
   ORG: ${{ github.repository_owner }}
+  REGISTRY_IMAGE: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
+  SHA: ${{ github.sha  }}
+  APP_NAME: "frontend"
+  DOCKER_TARGETS: '["runner"]'
 
 jobs:
-  build_and_push:
-    name: Build and Push Docker Image
-    runs-on: ubuntu-24.04
-    permissions:
-      id-token: write
-      contents: read
+  determine_build_target:
+    name: Determine Target
+    runs-on: ubuntu-latest # Can be a fast, standard runner
+    outputs:
+      # Output is now based on which step successfully ran
+      target_environment: ${{ steps.check_prod.outputs.environment || steps.check_public.outputs.environment || steps.check_fallback.outputs.environment }}
+      
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GH_ACTION_PAT }}
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Cache Docker layers
-        uses: actions/cache@v4
-        with:
-          path: ${{ runner.temp }}/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ghcr.io/${{ env.ORG }}/${{ env.REPO }}:${{ env.BRANCH }}-${{ github.sha }},ghcr.io/${{ env.ORG }}/${{ env.REPO }}:${{ env.BRANCH }}-latest
-          cache-from: type=local,src=${{ runner.temp }}/.buildx-cache
-          cache-to: type=local,dest=${{ runner.temp }}/.buildx-cache-new,mode=max
-          file: docker/Dockerfile 
-          build-args: |
-            RELEASE_VERSION=7.0.0
-            CHAIN_TYPE=twine
-            
-      - name: Cache Docker layers
-        uses: actions/cache@v4
-        with:
-          path: ${{ runner.temp }}/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-      - name: Move cache
-        run: |
-          rm -rf ${{ runner.temp }}/.buildx-cache
-          mv ${{ runner.temp }}/.buildx-cache-new ${{ runner.temp }}/.buildx-cache
-      - name: Handle build failure
-        if: ${{ failure() }}
-        run: echo "Build failed. Check logs for details."
-        
-      # - name: Build Docker Image
-      #   run: |
-      #     docker build -f docker/Dockerfile \
-      #     --build-arg RELEASE_VERSION=7.0.0 \
-      #     --build-arg CHAIN_TYPE=twine \
-      #     -t ghcr.io/${{ env.ORG }}/${{ env.REPO }}:${{ env.BRANCH }}-${GITHUB_SHA} \
-      #     .
-      # - name: Push Docker Image
-      #   run: |
-      #     docker push ghcr.io/${{ env.ORG }}/${{ env.REPO }}:${{ env.BRANCH }}-${GITHUB_SHA}
+      - name: Start timer
+        id: start-time
+        run: echo "start_time=$(date +%s)" >> $GITHUB_ENV
 
-  deploy:
-    name: Deploy Latest Tag
-    runs-on: ubuntu-24.04
-    needs: ["build_and_push"]
-    permissions:
-      id-token: write
-      contents: read
-
-    steps:
-      - uses: step-security/harden-runner@446798f8213ac2e75931c1b0769676d927801858 # v2.10.3
-        with:
-          egress-policy: audit
       - name: Checkout tools repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5.0.0
         with:
           repository: twinexyz/argocd
           path: argocd
           token: ${{ secrets.GH_ACTION_PAT  }}
-      - name: Update Tag in Helm Values for argocd
+          persist-credentials: false
+
+      - name: CHECK Production Tag (v*.*.*)
+        id: check_prod
+        if: |
+          startsWith(github.ref, 'refs/tags/') &&
+          startsWith(github.ref_name, 'v') &&
+          !contains(github.ref_name, '-pub') &&
+          !contains(github.ref_name, '-beta') &&
+          !contains(github.ref_name, '-test') &&
+          !contains(github.ref_name, '-dev') &&
+          !contains(github.ref_name, '-rc')
+        run: echo "environment=production" >> $GITHUB_OUTPUT
+
+      - name: CHECK Public Tag (v*.*.*-pub or -beta)
+        id: check_public
+        if: |
+          steps.check_prod.outcome != 'success' &&
+          startsWith(github.ref, 'refs/tags/') &&
+          (contains(github.ref_name, '-pub') || contains(github.ref_name, '-beta'))
+        run: echo "environment=public" >> $GITHUB_OUTPUT
+
+      - name: CHECK Fallback (branch or rejected tags)
+        id: check_fallback
+        if: |
+          steps.check_prod.outcome != 'success' &&
+          steps.check_public.outcome != 'success'
+        run: echo "environment=staging" >> $GITHUB_OUTPUT
+
+      - name: Handle build failure
+        if: ${{ failure() }}
+        run: echo "Build failed. Check logs for details."
+
+      - name: End timer and calculate duration
+        id: set-duration
         run: |
-            ls -al
-            cd argocd/apps/values/${{ env.REPO }}/staging &&  sed -i "/tag:/s/tag:.*/tag: ${{ env.BRANCH }}-${GITHUB_SHA}/" blockscout.yaml
+          end_time=$(date +%s)
+          duration=$((end_time - ${{ env.start_time }}))
+          echo "duration=${duration}" >> $GITHUB_OUTPUT
+
+  build_arch:
+    name: Build Image (${{ matrix.target }} - ${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    environment:
+      name: ${{ needs.determine_build_target.outputs.target_environment }}
+    needs: [determine_build_target]
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+            platform: linux/amd64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
+    env:
+      ACTIONS_RESULTS_URL: ${{ matrix.arch == 'arm64' && secrets.CACHE_SERVER_URL_ARM64 || secrets.CACHE_SERVER_URL }}
+      
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Start timer
+        id: start-time
+        run: echo "start_time=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Checkout
+        uses: actions/checkout@v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Prepare
+        run: |
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5.8.0
+        with:
+          images: ${{ env.REGISTRY_IMAGE }}
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3.5.0
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GH_ACTION_ACTOR }}
+          password: ${{ secrets.GH_ACTION_PAT }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3.6.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3.11.1
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4.2.4
+        with:
+          path: ${{ runner.temp }}/.buildx-cache-${{ matrix.arch }}
+          key: ${{ runner.os }}-buildx-${{ github.sha }}-${{ matrix.arch }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-${{ matrix.arch }}-
+
+      - name: Echo variable
+        run: |
+          echo "------------------"
+          echo ${{ vars.FEATURES }}
+          echo $FEATURES
+          echo "------------------"
+
+      - name: Build and push ${{ matrix.arch }} image
+        id: build
+        uses: docker/build-push-action@v6.18.0
+        env:
+          BRANCH: ${{ env.CLEAN_BRANCH }}
+        with:
+          platforms: ${{ matrix.platform }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.metadata.outputs.tags }},${{ env.REGISTRY_IMAGE }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=image,push-by-digest=true,name=${{ env.REGISTRY_IMAGE }},push=true
+          secrets: |
+            github_token=${{ secrets.GH_ACTION_PAT }}
+            github_username=${{ secrets.GH_ACTION_USER }}
+          build-args: |
+            RSP_TAG=${{ secrets.RSP_TAG }}
+            RSP_FILENAME=rsp-${{ matrix.arch }}
+            SOLANA_STUB_PROVER_FILENAME=solana-stub-prover-${{ matrix.arch }}
+            TXNPROVER_TAG=${{ secrets.TXNPROVER_TAG }}
+            GITHUB_ORGANIZATION=${{ env.ORG }}
+            FEATURES=${{ vars.FEATURES }}
+            ARCH=${{ matrix.arch }}
+
+      - name: Export digest
+        run: |
+          mkdir -p ${{ runner.temp }}/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: digests-${{ env.PLATFORM_PAIR }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: warn
+          retention-days: 30
+          compression-level: 0
+          overwrite: true
+
+#        - name: Move cache
+#        run: |
+#          rm -rf ${{ runner.temp }}/.buildx-cache-${{ matrix.arch }}
+#          mv ${{ runner.temp }}/.buildx-cache-new-${{ matrix.arch }} ${{ runner.temp }}/.buildx-cache-${{ matrix.arch }}
+
+      - name: Handle build failure
+        if: ${{ failure() }}
+        run: echo "Build failed. Check logs for details."
+
+      - name: End timer and calculate duration
+        id: set-duration
+        run: |
+          end_time=$(date +%s)
+          duration=$((end_time - ${{ env.start_time }}))
+          echo "duration=${duration}" >> $GITHUB_OUTPUT
+
+
+  merge:
+    runs-on: ubuntu-latest
+    needs:
+      - build_arch
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v5.0.0
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3.5.0
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GH_ACTION_ACTOR }}
+          password: ${{ secrets.GH_ACTION_PAT }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3.11.1
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5.8.0
+        with:
+          images: ${{ env.REGISTRY_IMAGE }}
+          tags: |
+            type=raw,value=${{ env.SHA }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+        env:
+          BRANCH: ${{ env.CLEAN_BRANCH }}
+
+      - name: Create manifest list and push
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
+
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:${{ steps.meta.outputs.version }}
+
+
+  determine_deployment_target:
+    name: Determine Target
+    needs:
+      - merge
+    runs-on: ubuntu-latest # Can be a fast, standard runner
+    if: github.event_name != 'pull_request'
+    outputs:
+      # Output is now based on which step successfully ran
+      target_folder: ${{ steps.check_prod.outputs.folder || steps.check_public.outputs.folder || steps.check_fallback.outputs.folder }}
+      
+    steps:
+      - name: Start timer
+        id: start-time
+        run: echo "start_time=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Checkout tools repo
+        uses: actions/checkout@v5.0.0
+        with:
+          repository: twinexyz/argocd
+          path: argocd
+          token: ${{ secrets.GH_ACTION_PAT  }}
+          persist-credentials: false
+
+      - name: Sanitize branch slug
+        id: sanitize
+        run: |
+          CLEAN_BRANCH="${{ env.BRANCH }}"
+          BRANCH="${CLEAN_BRANCH//\//-}"
+          echo "CLEAN_BRANCH=$BRANCH" >> $GITHUB_ENV # Set for use in fallback
+      - name: CHECK Production Tag (v*.*.*)
+        id: check_prod
+        if: |
+          startsWith(github.ref, 'refs/tags/') &&
+          startsWith(github.ref_name, 'v') &&
+          !contains(github.ref_name, '-pub') &&
+          !contains(github.ref_name, '-beta') &&
+          !contains(github.ref_name, '-test') &&
+          !contains(github.ref_name, '-dev') &&
+          !contains(github.ref_name, '-rc')
+        run: echo "folder=production" >> $GITHUB_OUTPUT
+
+      - name: CHECK Public Tag (v*.*.*-pub or -beta)
+        id: check_public
+        if: |
+          steps.check_prod.outcome != 'success' &&
+          startsWith(github.ref, 'refs/tags/') &&
+          (contains(github.ref_name, '-pub') || contains(github.ref_name, '-beta'))
+        run: echo "folder=public" >> $GITHUB_OUTPUT
+
+      - name: CHECK Fallback (branch or rejected tags)
+        id: check_fallback
+        if: |
+          steps.check_prod.outcome != 'success' &&
+          steps.check_public.outcome != 'success'
+        run: echo "folder=${{ env.CLEAN_BRANCH }}" >> $GITHUB_OUTPUT
+
+      - name: Handle build failure
+        if: ${{ failure() }}
+        run: echo "Build failed. Check logs for details."
+
+      - name: End timer and calculate duration
+        id: set-duration
+        run: |
+          end_time=$(date +%s)
+          duration=$((end_time - ${{ env.start_time }}))
+          echo "duration=${duration}" >> $GITHUB_OUTPUT
+  deploy:
+    name: Deploy to ${{ needs.determine_deployment_target.outputs.target_folder }}
+    #runs-on: [self-hosted, linux, x64]
+    runs-on: ubuntu-latest # Can be a fast, standard runner
+    needs: [determine_deployment_target]
+    #environment:
+    #  name: ${{ needs.determine_deployment_target.outputs.target_folder }} # Dynamically set: 'staging', 'public', or 'production'
+    #if: needs.determine_deployment_target.outputs.target_folder != ''
+    if: needs.determine_deployment_target.outputs.target_folder != '' && github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - name: Start timer
+        id: start-time
+        run: echo "start_time=$(date +%s)" >> $GITHUB_ENV
+      - name: Checkout tools repo
+        uses: actions/checkout@v5.0.0
+        with:
+          repository: twinexyz/argocd
+          path: argocd
+          token: ${{ secrets.GH_ACTION_PAT  }}
+          persist-credentials: false
+
+      - name: Update Tag in Helm Values for argocd
+        env:
+          TARGET_DIR: ${{ needs.determine_deployment_target.outputs.target_folder }}
+        run: |
+            echo "Changing directory to: argocd/apps/values/${{ env.REPO }}/${{ env.TARGET_DIR }}"
+            cd argocd/apps/values/${{  env.REPO }}/${{ env.TARGET_DIR }}
+            APPS=$(echo "${{ env.APP_NAME }}" | tr -d ' ' | tr ',' '\n')
+            for app in $APPS; do
+              echo "Updating tag for $app"
+              sed -i "/tag:/s/tag:.*/tag: ${{ env.SHA }}/" $app.yaml
+            done
+            git config --global url.https://${{ secrets.GH_ACTION_PAT }}@github.com/.insteadOf https://github.com/
             git config --global user.email "devops@twinelabs.xyz"
-            git config --global user.name "pen-pal"
+            git config --global user.name "${{ secrets.GH_ACTION_ACTOR }}"
             git add .
-            git commit --allow-empty -m "updated image tag to ${GITHUB_SHA} for ${{ env.REPO }}"
+            git commit --allow-empty -m "updated image tag to $${{ env.SHA }} for ${{ env.REPO }} for ${{ env.TARGET_DIR }} deployment"
             git push origin main
+      - name: Clean up Git global config
+        run: |
+          rm -f ~/.gitconfig
+          echo "Removed global Git config"
+      - name: Handle build failure
+        if: ${{ failure() }}
+        run: echo "Build failed. Check logs for details."
+
+      - name: End timer and calculate duration
+        id: set-duration
+        run: |
+          end_time=$(date +%s)
+          duration=$((end_time - ${{ env.start_time }}))
+          echo "duration=${duration}" >> $GITHUB_OUTPUT
