@@ -24,8 +24,7 @@ env:
   ORG: ${{ github.repository_owner }}
   REGISTRY_IMAGE: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
   SHA: ${{ github.sha  }}
-  APP_NAME: "frontend"
-  DOCKER_TARGETS: '["runner"]'
+  APP_NAME: "blockscout"
 
 jobs:
   determine_build_target:
