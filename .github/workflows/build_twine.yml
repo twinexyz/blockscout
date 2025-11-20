@@ -170,6 +170,7 @@ jobs:
           tags: ${{ steps.metadata.outputs.tags }},${{ env.REGISTRY_IMAGE }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,push-by-digest=true,name=${{ env.REGISTRY_IMAGE }},push=true
+          file: docker/Dockerfile
           secrets: |
             github_token=${{ secrets.GH_ACTION_PAT }}
             github_username=${{ secrets.GH_ACTION_USER }}
