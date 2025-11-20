@@ -170,17 +170,9 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,push-by-digest=true,name=${{ env.REGISTRY_IMAGE }},push=true
           file: docker/Dockerfile
-          secrets: |
-            github_token=${{ secrets.GH_ACTION_PAT }}
-            github_username=${{ secrets.GH_ACTION_USER }}
           build-args: |
-            RSP_TAG=${{ secrets.RSP_TAG }}
-            RSP_FILENAME=rsp-${{ matrix.arch }}
-            SOLANA_STUB_PROVER_FILENAME=solana-stub-prover-${{ matrix.arch }}
-            TXNPROVER_TAG=${{ secrets.TXNPROVER_TAG }}
-            GITHUB_ORGANIZATION=${{ env.ORG }}
-            FEATURES=${{ vars.FEATURES }}
-            ARCH=${{ matrix.arch }}
+            RELEASE_VERSION=7.0.0
+            CHAIN_TYPE=twine
 
       - name: Export digest
         run: |
