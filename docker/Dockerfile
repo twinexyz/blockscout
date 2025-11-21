@@ -115,3 +115,4 @@ COPY --from=builder --chown=${BLOCKSCOUT_USER}:${BLOCKSCOUT_GROUP} /app/config/a
 RUN mkdir dets && mkdir temp && chown -R ${BLOCKSCOUT_USER}:${BLOCKSCOUT_GROUP} /app
 
 USER ${BLOCKSCOUT_USER}:${BLOCKSCOUT_GROUP}
+
